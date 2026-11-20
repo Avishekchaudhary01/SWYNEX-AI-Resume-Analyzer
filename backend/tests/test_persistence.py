@@ -89,3 +89,31 @@ def test_validation_rejects_out_of_range_score(client):
     payload["match_score"] = 150
     response = client.post("/api/v1/analyses", json=payload)
     assert response.status_code == 422
+
+
+def test_resume_analysis_endpoint_persists_result(client):
+    import fitz
+
+    pdf = fitz.open()
+    page = pdf.new_page()
+    page.insert_text((72, 72), "Python SQL developer with project experience")
+    resume_bytes = pdf.tobytes()
+    pdf.close()
+
+    response = client.post(
+        "/api/v1/analyze",
+        data={"job_description": "Python SQL Docker backend developer", "job_title": "Backend Intern"},
+        files={"resume": ("resume.pdf", resume_bytes, "application/pdf")},
+    )
+    assert response.status_code == 200
+    assert response.json()["match_score"] == 67
+    saved = client.get("/api/v1/analyses")
+    assert len(saved.json()) == 1
+    assert saved.json()[0]["filename"] == "resume.pdf"
+
+
+def test_validation_requires_every_job_skill_to_be_classified(client):
+    payload = sample_payload()
+    payload["missing_skills"] = []
+    payload["match_score"] = 67
+    assert client.post("/api/v1/analyses", json=payload).status_code == 422
