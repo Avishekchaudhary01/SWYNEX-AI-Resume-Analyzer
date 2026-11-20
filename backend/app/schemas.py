@@ -55,6 +55,8 @@ class AnalysisCreate(BaseModel):
             raise ValueError("Matched skills must exist in both job_skills and resume_skills.")
         if not missing.issubset(job) or matched.intersection(missing):
             raise ValueError("Missing skills must be job skills and cannot also be matched.")
+        if matched.union(missing) != job:
+            raise ValueError("Every job skill must be classified as matched or missing.")
         expected_score = round(len(matched) / len(job) * 100)
         if self.match_score != expected_score:
             raise ValueError(f"match_score must equal {expected_score} for the supplied skill lists.")
