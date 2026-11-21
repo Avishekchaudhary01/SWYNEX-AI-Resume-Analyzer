@@ -50,7 +50,14 @@ cd frontend
 npm install
 npm run dev
 ```
-Open the local URL printed by Vite (usually http://localhost:5173).
+Open the local URL printed by Vite (usually http://localhost:5173). The frontend defaults to `http://127.0.0.1:8000` for its API. Ensure the backend CORS setting allows `http://localhost:5173`.
+
+## Frontend integration (Task 3)
+The React frontend submits resumes to `POST /api/v1/analyze`, displays the analysis report, checks backend health through `GET /api/v1/health`, and loads recent saved reports from `GET /api/v1/analyses?skip=0&limit=5`. It includes file validation, loading indicators, API error feedback, and history loading/error/empty states.
+
+Configure the API origin in `frontend/.env` using `frontend/.env.example` as a template. The default is `http://127.0.0.1:8000`. Restart Vite after changing environment variables.
+
+See [Task 3 frontend integration notes](docs/task-3-frontend-integration.md).
 
 ## API endpoints
 | Method | Endpoint | Description |
