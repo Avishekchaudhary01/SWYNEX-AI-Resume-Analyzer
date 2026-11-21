@@ -137,7 +137,7 @@ pip install -r requirements.txt
 pytest
 ```
 
-The GitHub Actions workflow also builds the frontend and runs the backend test suite on pushes and pull requests.
+The GitHub Actions workflow also builds the frontend and runs the backend test suite on pushes and pull requests, with the backend package path configured for test discovery.
 
 ## API endpoints
 
