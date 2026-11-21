@@ -3,6 +3,8 @@ from uuid import uuid4
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.database import Base, engine, get_db
@@ -16,11 +18,19 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="SWYNEX AI Resume Analyzer API",
     description="Resume analysis API with persistent analysis records.",
-    version="2.0.0",
+    version="2.1.0",
 )
+
+# Set FRONTEND_ORIGINS to a comma-separated list of trusted browser origins
+# when deploying. FRONTEND_ORIGIN remains supported for local/older setups.
+configured_origins = os.getenv("FRONTEND_ORIGINS") or os.getenv(
+    "FRONTEND_ORIGIN", "http://localhost:5173"
+)
+allowed_origins = [origin.strip().rstrip("/") for origin in configured_origins.split(",") if origin.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")],
+    allow_origins=allowed_origins,
     allow_credentials=False,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
@@ -28,8 +38,12 @@ app.add_middleware(
 
 
 @app.get("/api/v1/health")
-def health_check():
-    return {"status": "ok", "service": "AI Resume Analyzer API", "database": "configured"}
+def health_check(db: Session = Depends(get_db)):
+    try:
+        db.execute(text("SELECT 1"))
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail="Database is unavailable.") from exc
+    return {"status": "ok", "service": "AI Resume Analyzer API", "database": "connected"}
 
 
 @app.post("/api/v1/analyze", response_model=AnalysisResponse)
