@@ -1,94 +1,193 @@
 # SWYNEX AI Resume Analyzer
 
-A full-stack web application that compares a resume with a job description and returns an explainable skill-match report. Task 2 adds a persistent SQLite database and validated CRUD endpoints for analysis records.
+A full-stack resume analysis application that compares a PDF/DOCX resume with a job description and produces an explainable skill-overlap report.
 
-> **MVP note:** Skill detection currently uses a curated keyword dictionary and deterministic scoring. It is not a trained AI model and does not predict hiring outcomes.
+**Project status:** Full-stack source and deployment configuration are in GitHub. A live deployment and real application screenshots still need to be created from the hosting dashboard / a running browser session.
+
+> **Important:** This MVP uses a curated keyword dictionary and deterministic overlap scoring. It is not a trained AI model, does not understand every synonym or context, and must not be used as a hiring decision system.
+
+## Project links
+
+- **GitHub repository:** https://github.com/Avishekchaudhary01/SWYNEX-AI-Resume-Analyzer
+- **Live application:** Not deployed yet — follow [deployment instructions](docs/deployment.md), then replace this line with the actual frontend URL.
+- **Backend API:** Not deployed yet — replace this line with the actual API URL after deployment.
+- **API documentation:** Once deployed, open `<BACKEND_URL>/docs`.
 
 ## Features
-- PDF/DOCX resume upload (5 MB maximum)
-- Job description input and optional target role
-- Text extraction with PyMuPDF and python-docx
-- Explainable skill-match score, matched/missing skills and suggestions
-- FastAPI backend with validated analysis-record CRUD endpoints
-- SQLAlchemy ORM and SQLite persistence
-- React + Vite frontend
-- Unit tests for analysis and database/API behavior
 
-## Technology
+- Upload PDF and DOCX resumes (maximum 5 MB).
+- Paste a job description and optionally enter a target role.
+- Extract text from documents using PyMuPDF and python-docx.
+- Calculate a transparent keyword-overlap score.
+- Display matched skills, missing skills, detected resume skills and improvement suggestions.
+- Save analysis metadata and results to a relational database.
+- Browse recent analysis history.
+- Provide loading, validation, empty, network-error and API-error states.
+- Expose validated REST endpoints for creating, reading, updating and deleting analysis records.
+- Support local SQLite and deployment PostgreSQL configurations.
+
+## Screenshots
+
+Real screenshots should be captured after running the application and saved in `docs/screenshots/`. Do not use sample resumes containing personal information.
+
+Suggested captures:
+1. `app-home.png` — upload form and job-description input.
+2. `analysis-results.png` — score, matched skills, missing skills and suggestions.
+3. `analysis-history.png` — recent saved analyses.
+
+See [screenshot instructions](docs/screenshots/README.md). Screenshots are not included yet because a real browser run has not been performed in this environment.
+
+## Architecture
+
 | Layer | Technology |
 |---|---|
-| Frontend | React, Vite, CSS |
+| Frontend | React 18, Vite, JavaScript, CSS |
 | Backend | Python, FastAPI |
-| Database | SQLite |
-| ORM | SQLAlchemy 2.x |
-| Validation | Pydantic |
-| Document parsing | PyMuPDF, python-docx |
-| Testing | pytest, TestClient |
+| Database | SQLite locally; PostgreSQL for hosted deployment |
+| ORM / validation | SQLAlchemy 2.x, Pydantic |
+| Resume parsing | PyMuPDF, python-docx |
+| Testing / CI | pytest, GitHub Actions |
+| Hosting blueprint | Render |
+
+### Request flow
+
+1. The user selects a PDF/DOCX file and enters a job description.
+2. React sends multipart form data to `POST /api/v1/analyze`.
+3. FastAPI validates the request and extracts document text in memory.
+4. The analysis service detects supported skills and calculates keyword overlap.
+5. The API stores analysis metadata and skill lists in the configured database.
+6. React displays the score, skill groups, suggestions and recent history.
 
 ## Run locally
-### Backend
+
+### Requirements
+
+- Python 3.10 or newer
+- Node.js 18 or newer and npm
+- Git
+
+### 1. Clone the repository
+
 ```bash
+git clone https://github.com/Avishekchaudhary01/SWYNEX-AI-Resume-Analyzer.git
+cd SWYNEX-AI-Resume-Analyzer
+```
+
+### 2. Start the backend
+
+Windows PowerShell:
+
+```powershell
 cd backend
-python -m venv .venv
-# Activate the environment, then:
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
-API docs: http://127.0.0.1:8000/docs  
-Health check: http://127.0.0.1:8000/api/v1/health
 
-By default, SQLite creates `backend/resume_analyzer.db` when the API starts. To change the database location, set `DATABASE_URL` before starting the backend. Example:
-```env
-DATABASE_URL=sqlite:///./resume_analyzer.db
-FRONTEND_ORIGIN=http://localhost:5173
+macOS / Linux:
+
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
 ```
 
-### Frontend
+The API runs at http://127.0.0.1:8000.
+
+- Health: http://127.0.0.1:8000/api/v1/health
+- Interactive API docs: http://127.0.0.1:8000/docs
+
+SQLite is used by default and creates `resume_analyzer.db` in the backend working directory.
+
+### 3. Start the frontend
+
 Open a second terminal:
+
 ```bash
 cd frontend
 npm install
+```
+
+Create `.env` in the frontend folder:
+
+```env
+VITE_API_URL=http://127.0.0.1:8000
+```
+
+Then start Vite:
+
+```bash
 npm run dev
 ```
-Open the local URL printed by Vite (usually http://localhost:5173). The frontend defaults to `http://127.0.0.1:8000` for its API. Ensure the backend CORS setting allows `http://localhost:5173`.
 
-## Frontend integration (Task 3)
-The React frontend submits resumes to `POST /api/v1/analyze`, displays the analysis report, checks backend health through `GET /api/v1/health`, and loads recent saved reports from `GET /api/v1/analyses?skip=0&limit=5`. It includes file validation, loading indicators, API error feedback, and history loading/error/empty states.
+Open http://localhost:5173.
 
-Configure the API origin in `frontend/.env` using `frontend/.env.example` as a template. The default is `http://127.0.0.1:8000`. Restart Vite after changing environment variables.
+The backend allows `http://localhost:5173` by default. For a different frontend origin, set `FRONTEND_ORIGINS` on the backend to a comma-separated list of trusted origins.
 
-See [Task 3 frontend integration notes](docs/task-3-frontend-integration.md).
+### 4. Run backend tests
+
+From the repository root:
+
+```bash
+cd backend
+pip install -r requirements.txt
+pytest
+```
+
+The GitHub Actions workflow also builds the frontend and runs the backend test suite on pushes and pull requests.
 
 ## API endpoints
+
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/api/v1/health` | API health check |
-| POST | `/api/v1/analyze` | Analyze uploaded resume; saves the result to SQLite |
+| GET | `/api/v1/health` | Checks API and database connectivity |
+| POST | `/api/v1/analyze` | Analyze a resume upload and save its result |
 | POST | `/api/v1/analyses` | Create a validated analysis record |
-| GET | `/api/v1/analyses` | List records (supports `skip` and `limit`) |
+| GET | `/api/v1/analyses` | List records; supports `skip` and `limit` |
 | GET | `/api/v1/analyses/{id}` | Retrieve one record |
 | PUT | `/api/v1/analyses/{id}` | Replace a record after validation |
 | DELETE | `/api/v1/analyses/{id}` | Delete a record |
 
-The analysis resource validates filename length, score range, unique skill lists, skill relationships, and score consistency. Invalid payloads return HTTP 422; missing records return HTTP 404.
+## Scoring
 
-## Run tests
-```bash
-cd backend
-pytest
+```
+match score = (matched job-description skills / detected job-description skills) × 100
 ```
 
-## Scoring
-`match score = (matched job-description skills / detected job-description skills) × 100`
+The score is a simple keyword-overlap indicator. It does not measure a candidate's ability, seniority, experience quality or hiring probability.
 
-This is a keyword-overlap indicator, not a measure of ability or hiring probability. It can miss synonyms and context.
+## Deployment
 
-## Privacy and security
-- Resume file content is processed in memory and is not stored in the database.
-- Analysis metadata and skill lists are stored locally in SQLite.
-- Do not commit database files, real resumes, secrets, or personal data.
-- Before public deployment, configure HTTPS, strict CORS, rate limiting, malware scanning, access controls, retention/deletion policies and monitoring.
+A Render Blueprint is included at the repository root:
 
-See [docs/architecture.md](docs/architecture.md) for data models and system design.
+```
+render.yaml
+```
 
-Created as a learning project for the SWYNEX Internship.
+It describes a Python API service, a React static site and a PostgreSQL database. Follow [docs/deployment.md](docs/deployment.md) to deploy and obtain the live URLs.
+
+**Free-tier warning:** Render's free PostgreSQL databases expire 30 days after creation. Upgrade or use another persistent database before storing data you need to keep. Free web services may sleep when idle. Review current hosting terms and pricing before choosing a paid plan.
+
+## Privacy and security notes
+
+- Uploaded resume bytes and extracted resume text are processed in memory; they are not intentionally stored in the database.
+- Analysis metadata, detected skills and suggestions are persisted.
+- Do not commit real resumes, database files, API keys or other personal data.
+- Before production use, add authentication/authorization, rate limiting, upload malware scanning, retention/deletion controls, monitoring and a formal privacy policy.
+- The score is informational only and should not be used for automated hiring decisions.
+
+## Internship work
+
+Built and extended as a learning project for the SWYNEX Internship:
+- Task 1: Product and system architecture.
+- Task 2: Backend API and database.
+- Task 3: Frontend integration.
+- Task 4: Deployment preparation and documentation.
+
+---
+
+**Maintainer:** Avishek Chaudhary  
+**Repository:** [Avishekchaudhary01/SWYNEX-AI-Resume-Analyzer](https://github.com/Avishekchaudhary01/SWYNEX-AI-Resume-Analyzer)
